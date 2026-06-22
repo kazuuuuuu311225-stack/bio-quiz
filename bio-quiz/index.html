@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生物基礎クイズ</title>
+  <style>
+/* 生物基礎クイズ - レトロゲーム風スタイル */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-dark: #0a0a2e;
+  --bg-navy: #0d1b4a;
+  --frame-color: #e8e8f0;
+  --text-primary: #f0f0ff;
+  --text-dim: #8899bb;
+  --accent-green: #44ff88;
+  --accent-red: #ff4466;
+  --accent-yellow: #ffdd44;
+  --accent-cyan: #44ddff;
+  --pixel-font: 'MS Gothic', 'Courier New', Consolas, monospace;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--pixel-font);
+  color: var(--text-primary);
+  image-rendering: pixelated;
+}
+
+/* 16:9 ビューポート */
+.viewport {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, var(--bg-navy) 0%, var(--bg-dark) 70%, #000 100%);
+}
+
+.game-screen {
+  position: relative;
+  width: min(960px, 100vw);
+  aspect-ratio: 16 / 9;
+  max-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.screen.hidden {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ドット枠線フレーム */
+.box-frame {
+  width: 90%;
+  max-width: 720px;
+  position: relative;
+}
+
+.box-frame::before {
+  content: '┌──────────────────────────────────────────────────────────────────────────────┐';
+  display: block;
+  color: var(--frame-color);
+  font-size: clamp(10px, 1.2vw, 14px);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  letter-spacing: -0.05em;
+}
+
+.box-frame::after {
+  content: '└──────────────────────────────────────────────────────────────────────────────┘';
+  display: block;
+  color: var(--frame-color);
+  font-size: clamp(10px, 1.2vw, 14px);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  letter-spacing: -0.05em;
+}
+
+.box-inner {
+  border-left: 2px solid var(--frame-color);
+  border-right: 2px solid var(--frame-color);
+  background: rgba(10, 10, 46, 0.85);
+  padding: clamp(1rem, 3vw, 2rem) clamp(1.5rem, 4vw, 2.5rem);
+  min-height: 200px;
+}
+
+/* タイトル画面 */
+.game-title {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  text-align: center;
+  color: var(--accent-cyan);
+  text-shadow: 3px 3px 0 #004466;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.25rem;
+}
+
+.game-subtitle {
+  font-size: clamp(1rem, 3vw, 1.5rem);
+  text-align: center;
+  color: var(--accent-yellow);
+  letter-spacing: 0.3em;
+  margin-bottom: 1.5rem;
+}
+
+.title-divider,
+.score-divider,
+.result-divider {
+  text-align: center;
+  color: var(--frame-color);
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  margin: 1rem 0;
+  letter-spacing: 0.1em;
+}
+
+.copyright {
+  position: absolute;
+  bottom: 0.5rem;
+  font-size: clamp(0.6rem, 1.5vw, 0.75rem);
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+/* メニュー項目 */
+.menu-item {
+  text-align: center;
+  font-size: clamp(1.2rem, 3.5vw, 1.8rem);
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  margin: 1rem 0;
+  transition: color 0.1s;
+}
+
+.menu-item.selected {
+  color: var(--accent-yellow);
+  text-shadow: 2px 2px 0 #665500;
+}
+
+.menu-item .cursor {
+  display: inline-block;
+  width: 1.5em;
+  color: var(--accent-yellow);
+}
+
+.menu-item:not(.selected) .cursor {
+  visibility: hidden;
+}
+
+/* クイズ画面 */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  color: var(--accent-cyan);
+  margin-bottom: 1rem;
+  letter-spacing: 0.05em;
+}
+
+.question-area {
+  margin-bottom: 1.5rem;
+}
+
+.question-label {
+  font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.question-text {
+  font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+  line-height: 1.8;
+  color: var(--text-primary);
+  min-height: 3.6em;
+}
+
+.choices-area {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.4rem, 1.5vw, 0.75rem);
+  margin-bottom: 1rem;
+}
+
+.choice-item {
+  font-size: clamp(0.85rem, 2.2vw, 1.1rem);
+  color: var(--text-dim);
+  padding: 0.3rem 0;
+  letter-spacing: 0.05em;
+  transition: color 0.1s;
+  line-height: 1.6;
+}
+
+.choice-item.selected {
+  color: var(--accent-yellow);
+  text-shadow: 1px 1px 0 #665500;
+}
+
+.choice-item .cursor {
+  display: inline-block;
+  width: 1.5em;
+  color: var(--accent-yellow);
+}
+
+.choice-item:not(.selected) .cursor {
+  visibility: hidden;
+}
+
+.choice-label {
+  display: inline-block;
+  width: 2em;
+  color: var(--accent-cyan);
+}
+
+/* 結果画面 */
+.result-inner {
+  text-align: center;
+}
+
+.result-label {
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  letter-spacing: 0.2em;
+  margin-bottom: 0.5rem;
+}
+
+.result-label.correct {
+  color: var(--accent-green);
+  text-shadow: 2px 2px 0 #006622;
+}
+
+.result-label.incorrect {
+  color: var(--accent-red);
+  text-shadow: 2px 2px 0 #660022;
+}
+
+.result-answer {
+  font-size: clamp(0.85rem, 2.2vw, 1.1rem);
+  color: var(--accent-cyan);
+  margin-bottom: 1rem;
+  line-height: 1.8;
+}
+
+.explanation-text {
+  font-size: clamp(0.8rem, 2vw, 1rem);
+  color: var(--text-primary);
+  line-height: 1.8;
+  margin-bottom: 1.5rem;
+  text-align: left;
+  padding: 0 1rem;
+}
+
+/* スコア画面 */
+.score-inner {
+  text-align: center;
+}
+
+.score-title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  color: var(--accent-yellow);
+  text-shadow: 2px 2px 0 #665500;
+  letter-spacing: 0.3em;
+}
+
+.score-value {
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  color: var(--accent-cyan);
+  text-shadow: 3px 3px 0 #004466;
+  margin: 1rem 0;
+  letter-spacing: 0.1em;
+}
+
+.score-rank {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  color: var(--accent-green);
+  margin-bottom: 1rem;
+  letter-spacing: 0.1em;
+}
+
+/* ヒントテキスト */
+.hint-text {
+  text-align: center;
+  font-size: clamp(0.6rem, 1.5vw, 0.75rem);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  margin-top: 0.5rem;
+  animation: blink 1.2s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* スキャンライン効果 */
+.game-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+  </style>
+</head>
+<body tabindex="0">
+  <div class="viewport">
+    <div class="game-screen" id="gameScreen">
+      <section class="screen screen-title" id="screenTitle">
+        <div class="box-frame">
+          <div class="box-inner">
+            <h1 class="game-title">生物基礎</h1>
+            <p class="game-subtitle">４択クイズ</p>
+            <div class="title-divider">━━━━━━━━━━━━</div>
+            <p class="menu-item selected" id="startItem">
+              <span class="cursor">▶</span> START
+            </p>
+            <p class="hint-text">Enter で開始</p>
+          </div>
+        </div>
+        <p class="copyright">© BIO QUIZ 2026</p>
+      </section>
+
+      <section class="screen screen-quiz hidden" id="screenQuiz">
+        <div class="box-frame">
+          <div class="box-inner">
+            <div class="status-bar">
+              <span id="questionCounter">Q.1/5</span>
+              <span id="scoreDisplay">SCORE: 0</span>
+            </div>
+            <div class="question-area">
+              <p class="question-label">問題</p>
+              <p class="question-text" id="questionText"></p>
+            </div>
+            <div class="choices-area" id="choicesArea"></div>
+            <p class="hint-text">↑↓ で選択　Enter で決定</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen screen-result hidden" id="screenResult">
+        <div class="box-frame">
+          <div class="box-inner result-inner">
+            <p class="result-label" id="resultLabel">正解！</p>
+            <div class="result-divider">────────────</div>
+            <p class="result-answer" id="resultAnswer"></p>
+            <p class="explanation-text" id="explanationText"></p>
+            <p class="hint-text">Enter で次へ</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen screen-score hidden" id="screenScore">
+        <div class="box-frame">
+          <div class="box-inner score-inner">
+            <h2 class="score-title">RESULT</h2>
+            <div class="score-divider">━━━━━━━━━━━━</div>
+            <p class="score-value" id="finalScore">0 / 5</p>
+            <p class="score-rank" id="scoreRank"></p>
+            <div class="score-divider">━━━━━━━━━━━━</div>
+            <p class="menu-item selected" id="retryItem">
+              <span class="cursor">▶</span> RETRY
+            </p>
+            <p class="hint-text">Enter でリトライ</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+/**
+ * 生物基礎 4択クイズ
+ * キーボード操作: ↑↓ で選択、Enter で決定
+ * ※ 編集後は index.html 内の script も同じ内容に更新してください
+ */
+
+const questions = [
+  {
+    id: 1,
+    question: 'DNAの塩基の組み合わせとして正しいものはどれか？',
+    choices: ['AとT', 'AとG', 'CとT', 'GとT'],
+    answer: 0,
+    explanation: 'AとT、GとCが塩基対を形成する。',
+  },
+  {
+    id: 2,
+    question: '細胞内でエネルギー通貨として使われる物質はどれか？',
+    choices: ['DNA', 'ATP', 'RNA', 'グルコース'],
+    answer: 1,
+    explanation: 'ATP（アデノシン三リン酸）は細胞内でエネルギーを運ぶ。',
+  },
+  {
+    id: 3,
+    question: '光合成が行われる細胞小器官はどれか？',
+    choices: ['ミトコンドリア', 'リボソーム', '葉緑体', '液胞'],
+    answer: 2,
+    explanation: '葉緑体にクロロフィルがあり、光合成を行う。',
+  },
+  {
+    id: 4,
+    question: '遺伝情報をDNAからタンパク質へ伝える物質はどれか？',
+    choices: ['mRNA', 'tRNA', 'rRNA', 'snRNA'],
+    answer: 0,
+    explanation: 'mRNA（メッセンジャーRNA）がDNAの遺伝情報をリボソームへ運ぶ。',
+  },
+  {
+    id: 5,
+    question: '細胞分裂（体細胞分裂）の最終段階で起こることはどれか？',
+    choices: ['同源染色体の分離', '姉妹染色分体の分離', 'DNAの複製', '交叉の起こり'],
+    answer: 1,
+    explanation: '体細胞分裂の後期〜終期で姉妹染色分体が分離し、2つの細胞になる。',
+  },
+];
+
+const CHOICE_LABELS = ['A', 'B', 'C', 'D'];
+
+const state = {
+  screen: 'title',
+  currentIndex: 0,
+  selectedChoice: 0,
+  score: 0,
+  lastAnswer: null,
+};
+
+let screens;
+let elements;
+
+function initApp() {
+  screens = {
+    title: document.getElementById('screenTitle'),
+    quiz: document.getElementById('screenQuiz'),
+    result: document.getElementById('screenResult'),
+    score: document.getElementById('screenScore'),
+  };
+
+  elements = {
+    questionCounter: document.getElementById('questionCounter'),
+    scoreDisplay: document.getElementById('scoreDisplay'),
+    questionText: document.getElementById('questionText'),
+    choicesArea: document.getElementById('choicesArea'),
+    resultLabel: document.getElementById('resultLabel'),
+    resultAnswer: document.getElementById('resultAnswer'),
+    explanationText: document.getElementById('explanationText'),
+    finalScore: document.getElementById('finalScore'),
+    scoreRank: document.getElementById('scoreRank'),
+  };
+
+  document.addEventListener('keydown', handleKeydown);
+  document.body.focus();
+  showScreen('title');
+}
+
+function showScreen(name) {
+  Object.values(screens).forEach((el) => el.classList.add('hidden'));
+  screens[name].classList.remove('hidden');
+  state.screen = name;
+}
+
+function renderQuiz() {
+  const q = questions[state.currentIndex];
+  const total = questions.length;
+
+  elements.questionCounter.textContent = 'Q.' + (state.currentIndex + 1) + '/' + total;
+  elements.scoreDisplay.textContent = 'SCORE: ' + state.score;
+  elements.questionText.textContent = q.question;
+
+  elements.choicesArea.innerHTML = q.choices
+    .map(function (choice, i) {
+      var selected = i === state.selectedChoice ? ' selected' : '';
+      return (
+        '<p class="choice-item' + selected + '">' +
+        '<span class="cursor">▶</span>' +
+        '<span class="choice-label">' + CHOICE_LABELS[i] + '.</span>' +
+        escapeHtml(choice) +
+        '</p>'
+      );
+    })
+    .join('');
+}
+
+function renderResult(isCorrect) {
+  const q = questions[state.currentIndex];
+  const correctLabel = CHOICE_LABELS[q.answer];
+  const correctText = q.choices[q.answer];
+
+  elements.resultLabel.textContent = isCorrect ? '正解！' : '不正解…';
+  elements.resultLabel.className = 'result-label ' + (isCorrect ? 'correct' : 'incorrect');
+
+  if (isCorrect) {
+    elements.resultAnswer.innerHTML = correctLabel + '. ' + escapeHtml(correctText);
+  } else {
+    const chosen = CHOICE_LABELS[state.lastAnswer];
+    const chosenText = q.choices[state.lastAnswer];
+    elements.resultAnswer.innerHTML =
+      'あなたの回答: ' + chosen + '. ' + escapeHtml(chosenText) +
+      '<br>正解: ' + correctLabel + '. ' + escapeHtml(correctText);
+  }
+
+  elements.explanationText.textContent = q.explanation || '';
+}
+
+function renderScore() {
+  const total = questions.length;
+  elements.finalScore.textContent = state.score + ' / ' + total;
+  elements.scoreRank.textContent = getRankMessage(state.score, total);
+}
+
+function getRankMessage(score, total) {
+  const ratio = score / total;
+  if (ratio === 1) return '★ パーフェクト！ ★';
+  if (ratio >= 0.8) return 'よくできました！';
+  if (ratio >= 0.6) return 'もう少し！';
+  if (ratio >= 0.4) return '復習しよう';
+  return 'がんばろう！';
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function startQuiz() {
+  state.currentIndex = 0;
+  state.selectedChoice = 0;
+  state.score = 0;
+  showScreen('quiz');
+  renderQuiz();
+}
+
+function submitAnswer() {
+  const q = questions[state.currentIndex];
+  state.lastAnswer = state.selectedChoice;
+  const isCorrect = state.selectedChoice === q.answer;
+
+  if (isCorrect) {
+    state.score += 1;
+  }
+
+  renderResult(isCorrect);
+  showScreen('result');
+}
+
+function nextQuestion() {
+  state.currentIndex += 1;
+
+  if (state.currentIndex >= questions.length) {
+    renderScore();
+    showScreen('score');
+    return;
+  }
+
+  state.selectedChoice = 0;
+  showScreen('quiz');
+  renderQuiz();
+}
+
+function moveSelection(delta) {
+  const count = questions[state.currentIndex].choices.length;
+  state.selectedChoice = (state.selectedChoice + delta + count) % count;
+  renderQuiz();
+}
+
+function handleKeydown(event) {
+  if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'Enter') {
+    event.preventDefault();
+  }
+
+  switch (state.screen) {
+    case 'title':
+      if (event.key === 'Enter') startQuiz();
+      break;
+    case 'quiz':
+      if (event.key === 'ArrowUp') moveSelection(-1);
+      else if (event.key === 'ArrowDown') moveSelection(1);
+      else if (event.key === 'Enter') submitAnswer();
+      break;
+    case 'result':
+      if (event.key === 'Enter') nextQuestion();
+      break;
+    case 'score':
+      if (event.key === 'Enter') showScreen('title');
+      break;
+    default:
+      break;
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
+
+  </script>
+</body>
+</html>
